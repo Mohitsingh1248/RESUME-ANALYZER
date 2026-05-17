@@ -32,17 +32,17 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-border/60 backdrop-blur-xl bg-background/70">
+      <header className="glass sticky top-0 z-40 border-b-0">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/dashboard" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary shadow-glow transition-transform duration-300 group-hover:scale-110">
               <FileSearch className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="font-semibold tracking-tight">ResumeIQ</span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="transition-colors hover:text-destructive">
               <LogOut className="mr-2 h-4 w-4" /> Sign out
             </Button>
           </div>

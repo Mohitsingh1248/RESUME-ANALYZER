@@ -6,7 +6,6 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { FileSearch, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -67,14 +66,14 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
+        <Link to="/" className="mb-8 flex items-center justify-center gap-2 animate-fade-in-up">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-primary shadow-glow animate-float">
             <FileSearch className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-semibold tracking-tight">ResumeIQ</span>
         </Link>
 
-        <Card className="bg-gradient-card border-border/60 p-8 shadow-elevated">
+        <div className="glass-strong animate-scale-in rounded-2xl p-8 shadow-elevated">
           <h1 className="text-2xl font-semibold tracking-tight">
             {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
@@ -94,6 +93,7 @@ function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                className="glass transition-all duration-300 focus:shadow-glow"
               />
             </div>
             <div className="space-y-2">
@@ -106,9 +106,10 @@ function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                className="glass transition-all duration-300 focus:shadow-glow"
               />
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90">
+            <Button type="submit" disabled={loading} className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90 animate-pulse-glow rounded-xl">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
@@ -125,7 +126,7 @@ function AuthPage() {
             variant="outline"
             disabled={loading}
             onClick={handleGoogle}
-            className="w-full"
+            className="w-full glass hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -141,12 +142,12 @@ function AuthPage() {
             <button
               type="button"
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="font-medium text-foreground hover:text-primary"
+              className="font-medium text-foreground hover:text-primary transition-colors"
             >
               {mode === "signin" ? "Create an account" : "Sign in"}
             </button>
           </p>
-        </Card>
+        </div>
       </div>
     </div>
   );
