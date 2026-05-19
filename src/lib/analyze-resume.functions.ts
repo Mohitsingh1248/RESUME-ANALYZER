@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "./ai-gateway";
+
 
 const AnalysisSchema = z.object({
   score: z.number().int().min(0).max(100),
