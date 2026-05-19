@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { generateText, Output } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
@@ -8,9 +8,9 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 const AnalysisSchema = z.object({
   score: z.number().int().min(0).max(100),
   summary: z.string(),
-  strengths: z.array(z.string()).min(1).max(8),
-  weaknesses: z.array(z.string()).min(1).max(8),
-  suggestions: z.array(z.string()).min(1).max(8),
+  strengths: z.array(z.string()).max(8),
+  weaknesses: z.array(z.string()).max(8),
+  suggestions: z.array(z.string()).max(8),
 });
 
 const InputSchema = z.object({
@@ -29,15 +29,15 @@ export const analyzeResume = createServerFn({ method: "POST" })
     const model = gateway("google/gemini-3-flash-preview");
 
 
-    const { experimental_output } = await generateText({
+    const { object: analysis } = await generateObject({
       model,
-      experimental_output: Output.object({ schema: AnalysisSchema }),
+      schema: AnalysisSchema,
       system:
-        "You are a senior technical recruiter and resume coach. Analyze resumes critically and return concise, actionable feedback. Score 0-100 based on clarity, impact, relevance, formatting, and quantified achievements.",
+        "You are a senior technical recruiter and resume coach. Analyze resumes critically and return concise, actionable feedback. Score 0-100 based on clarity, impact, relevance, formatting, and quantified achievements. Always include at least one item in strengths, weaknesses, and suggestions.",
       prompt: `Analyze the following resume and return a structured assessment.\n\nResume text:\n"""\n${data.text}\n"""`,
     });
 
-    const analysis = experimental_output;
+
     const { supabase, userId } = context;
 
     const { data: row, error } = await supabase
