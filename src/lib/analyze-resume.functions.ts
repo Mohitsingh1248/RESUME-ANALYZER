@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "./ai-gateway";
+
 
 const AnalysisSchema = z.object({
   score: z.number().int().min(0).max(100),
@@ -21,11 +22,12 @@ export const analyzeResume = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) throw new Error("Missing OPENAI_API_KEY");
 
-    const gateway = createLovableAiGatewayProvider(key);
-    const model = gateway("google/gemini-3-flash-preview");
+    const openai = createOpenAI({ apiKey: key });
+    const model = openai("gpt-4o-mini");
+
 
     const { experimental_output } = await generateText({
       model,
