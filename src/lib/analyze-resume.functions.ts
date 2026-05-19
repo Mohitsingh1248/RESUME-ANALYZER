@@ -8,9 +8,9 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 const AnalysisSchema = z.object({
   score: z.number().int().min(0).max(100),
   summary: z.string(),
-  strengths: z.array(z.string()).min(1).max(8),
-  weaknesses: z.array(z.string()).min(1).max(8),
-  suggestions: z.array(z.string()).min(1).max(8),
+  strengths: z.array(z.string()).max(8),
+  weaknesses: z.array(z.string()).max(8),
+  suggestions: z.array(z.string()).max(8),
 });
 
 const InputSchema = z.object({
