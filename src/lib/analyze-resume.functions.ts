@@ -117,7 +117,15 @@ export const analyzeResume = createServerFn({ method: "POST" })
       rawAnalysis = JSON.parse(text);
     } catch {
       const match = text.match(/\{[\s\S]*\}/);
-      rawAnalysis = match ? JSON.parse(match[0]) : null;
+      if (match) {
+        try {
+          rawAnalysis = JSON.parse(match[0]);
+        } catch {
+          rawAnalysis = null;
+        }
+      } else {
+        rawAnalysis = null;
+      }
     }
 
     const analysis = sanitizeAnalysis(rawAnalysis, data.text);
