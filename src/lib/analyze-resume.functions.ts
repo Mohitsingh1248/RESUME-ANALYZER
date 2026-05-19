@@ -29,15 +29,15 @@ export const analyzeResume = createServerFn({ method: "POST" })
     const model = gateway("google/gemini-3-flash-preview");
 
 
-    const { experimental_output } = await generateText({
+    const { object: analysis } = await generateObject({
       model,
-      experimental_output: Output.object({ schema: AnalysisSchema }),
+      schema: AnalysisSchema,
       system:
-        "You are a senior technical recruiter and resume coach. Analyze resumes critically and return concise, actionable feedback. Score 0-100 based on clarity, impact, relevance, formatting, and quantified achievements.",
+        "You are a senior technical recruiter and resume coach. Analyze resumes critically and return concise, actionable feedback. Score 0-100 based on clarity, impact, relevance, formatting, and quantified achievements. Always include at least one item in strengths, weaknesses, and suggestions.",
       prompt: `Analyze the following resume and return a structured assessment.\n\nResume text:\n"""\n${data.text}\n"""`,
     });
 
-    const analysis = experimental_output;
+
     const { supabase, userId } = context;
 
     const { data: row, error } = await supabase
