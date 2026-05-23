@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useServerFn } from "@tanstack/react-start";
 import { extractPdfText } from "@/lib/pdf-extract";
@@ -7,9 +7,22 @@ import { analyzeResume } from "@/lib/analyze-resume.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+
+type Stage = "idle" | "reading" | "extracting" | "analyzing" | "saving" | "done";
+
+const STAGE_META: Record<Exclude<Stage, "idle">, { label: string; target: number }> = {
+  reading: { label: "Reading file", target: 15 },
+  extracting: { label: "Extracting text from PDF", target: 40 },
+  analyzing: { label: "Analyzing with AI", target: 85 },
+  saving: { label: "Saving results", target: 95 },
+  done: { label: "Complete", target: 100 },
+};
+
+const STAGE_ORDER: Exclude<Stage, "idle">[] = ["reading", "extracting", "analyzing", "saving", "done"];
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -27,7 +40,10 @@ function Dashboard() {
   const runAnalyze = useServerFn(analyzeResume);
   const [analyzing, setAnalyzing] = useState(false);
   const [history, setHistory] = useState<Analysis[]>([]);
-  const [step, setStep] = useState("");
+  const [stage, setStage] = useState<Stage>("idle");
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState("");
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -42,6 +58,28 @@ function Dashboard() {
     load();
   }, [load]);
 
+  const advanceTo = useCallback((next: Exclude<Stage, "idle">) => {
+    setStage(next);
+    const target = STAGE_META[next].target;
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= target) return p;
+        const delta = Math.max(0.4, (target - p) * 0.08);
+        return Math.min(target, p + delta);
+      });
+    }, 200);
+  }, []);
+
+  const stopTicking = useCallback(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => stopTicking(), [stopTicking]);
+
   const onDrop = useCallback(
     async (files: File[]) => {
       const file = files[0];
@@ -55,23 +93,33 @@ function Dashboard() {
         return;
       }
       setAnalyzing(true);
+      setFileName(file.name);
+      setProgress(0);
+      advanceTo("reading");
       try {
-        setStep("Extracting text…");
+        advanceTo("extracting");
         const text = await extractPdfText(file);
         if (text.length < 50) throw new Error("Couldn't read text from this PDF");
-        setStep("Analyzing with AI…");
+        advanceTo("analyzing");
         const result = await runAnalyze({ data: { fileName: file.name, text: text.slice(0, 50000) } });
+        advanceTo("saving");
+        stopTicking();
+        setProgress(100);
+        setStage("done");
         toast.success(`Analysis complete — score ${result.score}`);
         navigate({ to: "/analysis/$id", params: { id: result.id } });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Analysis failed";
         toast.error(msg);
       } finally {
+        stopTicking();
         setAnalyzing(false);
-        setStep("");
+        setStage("idle");
+        setProgress(0);
+        setFileName("");
       }
     },
-    [runAnalyze, navigate],
+    [runAnalyze, navigate, advanceTo, stopTicking],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -110,11 +158,51 @@ function Dashboard() {
         >
           <input {...getInputProps()} />
           {analyzing ? (
-            <>
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-lg font-medium animate-fade-in-up">{step}</p>
-              <p className="mt-1 text-sm text-muted-foreground">This usually takes 10-20 seconds</p>
-            </>
+            <div className="w-full max-w-md space-y-5 animate-fade-in-up">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium">{fileName || "Processing…"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stage !== "idle" ? STAGE_META[stage].label : ""}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold tabular-nums text-primary">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-left sm:grid-cols-4">
+                {STAGE_ORDER.filter((s) => s !== "done").map((s) => {
+                  const currentIdx = stage === "idle" ? -1 : STAGE_ORDER.indexOf(stage);
+                  const sIdx = STAGE_ORDER.indexOf(s);
+                  const isDone = currentIdx > sIdx;
+                  const isActive = currentIdx === sIdx;
+                  return (
+                    <li
+                      key={s}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${
+                        isDone
+                          ? "text-success"
+                          : isActive
+                            ? "text-primary"
+                            : "text-muted-foreground/60"
+                      }`}
+                    >
+                      {isDone ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : isActive ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      )}
+                      <span className="truncate">{STAGE_META[s].label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+            </div>
           ) : (
             <>
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow animate-float">
