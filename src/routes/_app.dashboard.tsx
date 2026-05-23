@@ -158,11 +158,51 @@ function Dashboard() {
         >
           <input {...getInputProps()} />
           {analyzing ? (
-            <>
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-lg font-medium animate-fade-in-up">{step}</p>
-              <p className="mt-1 text-sm text-muted-foreground">This usually takes 10-20 seconds</p>
-            </>
+            <div className="w-full max-w-md space-y-5 animate-fade-in-up">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium">{fileName || "Processing…"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stage !== "idle" ? STAGE_META[stage].label : ""}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold tabular-nums text-primary">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-left sm:grid-cols-4">
+                {STAGE_ORDER.filter((s) => s !== "done").map((s) => {
+                  const currentIdx = stage === "idle" ? -1 : STAGE_ORDER.indexOf(stage);
+                  const sIdx = STAGE_ORDER.indexOf(s);
+                  const isDone = currentIdx > sIdx;
+                  const isActive = currentIdx === sIdx;
+                  return (
+                    <li
+                      key={s}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${
+                        isDone
+                          ? "text-success"
+                          : isActive
+                            ? "text-primary"
+                            : "text-muted-foreground/60"
+                      }`}
+                    >
+                      {isDone ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : isActive ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      )}
+                      <span className="truncate">{STAGE_META[s].label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+            </div>
           ) : (
             <>
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow animate-float">
