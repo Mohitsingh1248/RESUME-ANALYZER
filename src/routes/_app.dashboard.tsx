@@ -40,7 +40,10 @@ function Dashboard() {
   const runAnalyze = useServerFn(analyzeResume);
   const [analyzing, setAnalyzing] = useState(false);
   const [history, setHistory] = useState<Analysis[]>([]);
-  const [step, setStep] = useState("");
+  const [stage, setStage] = useState<Stage>("idle");
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState("");
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -55,6 +58,28 @@ function Dashboard() {
     load();
   }, [load]);
 
+  const advanceTo = useCallback((next: Exclude<Stage, "idle">) => {
+    setStage(next);
+    const target = STAGE_META[next].target;
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= target) return p;
+        const delta = Math.max(0.4, (target - p) * 0.08);
+        return Math.min(target, p + delta);
+      });
+    }, 200);
+  }, []);
+
+  const stopTicking = useCallback(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => stopTicking(), [stopTicking]);
+
   const onDrop = useCallback(
     async (files: File[]) => {
       const file = files[0];
@@ -68,23 +93,33 @@ function Dashboard() {
         return;
       }
       setAnalyzing(true);
+      setFileName(file.name);
+      setProgress(0);
+      advanceTo("reading");
       try {
-        setStep("Extracting text…");
+        advanceTo("extracting");
         const text = await extractPdfText(file);
         if (text.length < 50) throw new Error("Couldn't read text from this PDF");
-        setStep("Analyzing with AI…");
+        advanceTo("analyzing");
         const result = await runAnalyze({ data: { fileName: file.name, text: text.slice(0, 50000) } });
+        advanceTo("saving");
+        stopTicking();
+        setProgress(100);
+        setStage("done");
         toast.success(`Analysis complete — score ${result.score}`);
         navigate({ to: "/analysis/$id", params: { id: result.id } });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Analysis failed";
         toast.error(msg);
       } finally {
+        stopTicking();
         setAnalyzing(false);
-        setStep("");
+        setStage("idle");
+        setProgress(0);
+        setFileName("");
       }
     },
-    [runAnalyze, navigate],
+    [runAnalyze, navigate, advanceTo, stopTicking],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
