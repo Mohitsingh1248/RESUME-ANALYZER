@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useServerFn } from "@tanstack/react-start";
 import { extractPdfText } from "@/lib/pdf-extract";
@@ -7,9 +7,22 @@ import { analyzeResume } from "@/lib/analyze-resume.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+
+type Stage = "idle" | "reading" | "extracting" | "analyzing" | "saving" | "done";
+
+const STAGE_META: Record<Exclude<Stage, "idle">, { label: string; target: number }> = {
+  reading: { label: "Reading file", target: 15 },
+  extracting: { label: "Extracting text from PDF", target: 40 },
+  analyzing: { label: "Analyzing with AI", target: 85 },
+  saving: { label: "Saving results", target: 95 },
+  done: { label: "Complete", target: 100 },
+};
+
+const STAGE_ORDER: Exclude<Stage, "idle">[] = ["reading", "extracting", "analyzing", "saving", "done"];
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
