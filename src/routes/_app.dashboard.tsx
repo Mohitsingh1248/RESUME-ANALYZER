@@ -172,8 +172,9 @@ function Dashboard() {
             isDragActive
               ? "border-primary/60 bg-primary/5 scale-[1.01]"
               : "border-border/50 hover:border-primary/40 hover:bg-primary/[0.03]"
-          } ${analyzing ? "pointer-events-none opacity-70" : ""}`}
+          } ${analyzing ? "cursor-default" : ""}`}
         >
+
           <input {...getInputProps()} />
           {analyzing ? (
             <div className="w-full max-w-md space-y-5 animate-fade-in-up">
