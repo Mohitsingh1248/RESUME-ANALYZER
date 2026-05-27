@@ -220,7 +220,20 @@ function Dashboard() {
                   );
                 })}
               </ul>
-              <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancel();
+                  }}
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Cancel
+                </Button>
+              </div>
             </div>
           ) : (
             <>
