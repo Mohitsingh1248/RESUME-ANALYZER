@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check } from "lucide-react";
+import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -80,6 +80,22 @@ function Dashboard() {
 
   useEffect(() => () => stopTicking(), [stopTicking]);
 
+  const canceledRef = useRef(false);
+
+  const resetUi = useCallback(() => {
+    stopTicking();
+    setAnalyzing(false);
+    setStage("idle");
+    setProgress(0);
+    setFileName("");
+  }, [stopTicking]);
+
+  const handleCancel = useCallback(() => {
+    canceledRef.current = true;
+    resetUi();
+    toast.message("Analysis canceled");
+  }, [resetUi]);
+
   const onDrop = useCallback(
     async (files: File[]) => {
       const file = files[0];
@@ -92,6 +108,7 @@ function Dashboard() {
         toast.error("File too large (max 10MB)");
         return;
       }
+      canceledRef.current = false;
       setAnalyzing(true);
       setFileName(file.name);
       setProgress(0);
@@ -99,9 +116,11 @@ function Dashboard() {
       try {
         advanceTo("extracting");
         const text = await extractPdfText(file);
+        if (canceledRef.current) return;
         if (text.length < 50) throw new Error("Couldn't read text from this PDF");
         advanceTo("analyzing");
         const result = await runAnalyze({ data: { fileName: file.name, text: text.slice(0, 50000) } });
+        if (canceledRef.current) return;
         advanceTo("saving");
         stopTicking();
         setProgress(100);
@@ -109,17 +128,16 @@ function Dashboard() {
         toast.success(`Analysis complete — score ${result.score}`);
         navigate({ to: "/analysis/$id", params: { id: result.id } });
       } catch (err) {
+        if (canceledRef.current) return;
         const msg = err instanceof Error ? err.message : "Analysis failed";
         toast.error(msg);
       } finally {
-        stopTicking();
-        setAnalyzing(false);
-        setStage("idle");
-        setProgress(0);
-        setFileName("");
+        if (!canceledRef.current) {
+          resetUi();
+        }
       }
     },
-    [runAnalyze, navigate, advanceTo, stopTicking],
+    [runAnalyze, navigate, advanceTo, stopTicking, resetUi],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -154,8 +172,9 @@ function Dashboard() {
             isDragActive
               ? "border-primary/60 bg-primary/5 scale-[1.01]"
               : "border-border/50 hover:border-primary/40 hover:bg-primary/[0.03]"
-          } ${analyzing ? "pointer-events-none opacity-70" : ""}`}
+          } ${analyzing ? "cursor-default" : ""}`}
         >
+
           <input {...getInputProps()} />
           {analyzing ? (
             <div className="w-full max-w-md space-y-5 animate-fade-in-up">
@@ -201,7 +220,20 @@ function Dashboard() {
                   );
                 })}
               </ul>
-              <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancel();
+                  }}
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Cancel
+                </Button>
+              </div>
             </div>
           ) : (
             <>
