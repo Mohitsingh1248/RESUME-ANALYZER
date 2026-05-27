@@ -147,6 +147,9 @@ export const analyzeResume = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[analyzeResume] DB insert error:", error);
+      throw new Error("Failed to save analysis. Please try again.");
+    }
     return { id: row.id, ...analysis };
   });
