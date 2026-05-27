@@ -80,6 +80,22 @@ function Dashboard() {
 
   useEffect(() => () => stopTicking(), [stopTicking]);
 
+  const canceledRef = useRef(false);
+
+  const resetUi = useCallback(() => {
+    stopTicking();
+    setAnalyzing(false);
+    setStage("idle");
+    setProgress(0);
+    setFileName("");
+  }, [stopTicking]);
+
+  const handleCancel = useCallback(() => {
+    canceledRef.current = true;
+    resetUi();
+    toast.message("Analysis canceled");
+  }, [resetUi]);
+
   const onDrop = useCallback(
     async (files: File[]) => {
       const file = files[0];
@@ -92,6 +108,7 @@ function Dashboard() {
         toast.error("File too large (max 10MB)");
         return;
       }
+      canceledRef.current = false;
       setAnalyzing(true);
       setFileName(file.name);
       setProgress(0);
@@ -99,9 +116,11 @@ function Dashboard() {
       try {
         advanceTo("extracting");
         const text = await extractPdfText(file);
+        if (canceledRef.current) return;
         if (text.length < 50) throw new Error("Couldn't read text from this PDF");
         advanceTo("analyzing");
         const result = await runAnalyze({ data: { fileName: file.name, text: text.slice(0, 50000) } });
+        if (canceledRef.current) return;
         advanceTo("saving");
         stopTicking();
         setProgress(100);
@@ -109,17 +128,16 @@ function Dashboard() {
         toast.success(`Analysis complete — score ${result.score}`);
         navigate({ to: "/analysis/$id", params: { id: result.id } });
       } catch (err) {
+        if (canceledRef.current) return;
         const msg = err instanceof Error ? err.message : "Analysis failed";
         toast.error(msg);
       } finally {
-        stopTicking();
-        setAnalyzing(false);
-        setStage("idle");
-        setProgress(0);
-        setFileName("");
+        if (!canceledRef.current) {
+          resetUi();
+        }
       }
     },
-    [runAnalyze, navigate, advanceTo, stopTicking],
+    [runAnalyze, navigate, advanceTo, stopTicking, resetUi],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
