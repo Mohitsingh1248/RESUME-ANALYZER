@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check } from "lucide-react";
+import { Upload, FileText, Loader2, Trash2, Sparkles, TrendingUp, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
