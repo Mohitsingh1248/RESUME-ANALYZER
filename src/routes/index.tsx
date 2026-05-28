@@ -19,7 +19,9 @@ function Landing() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard" });
+    if (!loading && user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
   }, [user, loading, navigate]);
 
   return (

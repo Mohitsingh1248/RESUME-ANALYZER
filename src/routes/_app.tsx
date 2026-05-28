@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FileSearch, LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -14,7 +15,10 @@ function AppLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (!loading && !user) {
+      toast.error("Please sign in to continue");
+      navigate({ to: "/auth", replace: true });
+    }
   }, [user, loading, navigate]);
 
   if (loading || !user) {
